@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Savin</title>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: url('Savinclean.png') no-repeat center center fixed;
+      background-size: cover;
+      height: 100vh;
+      font-family: poppins;
+    }
+
+    .chat-toggle-wrapper {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .chat-tooltip {
+      background-color: #fff;
+      color: #000;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      white-space: nowrap;
+      margin-bottom: 10px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      font-weight: 500;
+    }
+
+    .chat-toggle-wrapper:hover .chat-tooltip {
+      opacity: 1;
+    }
+
+    .chat-toggle-btn {
+      width: 150px; /* Tamaño del botón del logo */
+      height: 150px;
+      border-radius: 50%;
+      background: url('Ceciliou.png') no-repeat center center;
+      background-size: cover;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .chat-container {
+      position: fixed;
+      bottom: 120px;
+      right: 20px;
+      width: 380px;
+      height: 520px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 1001;
+      box-sizing: border-box;
+
+      opacity: 0;
+      transform: scale(0.9);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      pointer-events: none;
+    }
+
+    .chat-container.open {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+    }
+
+    .chat-header {
+      background: #f8e916;
+      color: white;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chat-header-title {
+      display: flex;
+      align-items: center;
+    }
+
+    .chat-header img {
+      height: 30px;
+      margin-right: 10px;
+      border-radius: 50%;
+    }
+
+    .chat-close-btn {
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+      background: #f9f9f9;
+    }
+
+    .message {
+      margin-bottom: 10px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      max-width: 80%;
+      word-wrap: break-word;
+      font-size: 13px;
+    }
+
+    .user {
+      background: #d1e9ff;
+      margin-left: auto;
+      text-align: right;
+    }
+
+    .bot {
+      background: #eee;
+      text-align: left;
+    }
+
+    .chat-input {
+      display: flex;
+      border-top: 1px solid #ddd;
+      height: 50px;
+      box-sizing: border-box;
+    }
+
+    .chat-input input {
+      flex: 1;
+      border: none;
+      padding: 10px;
+      font-size: 15px;
+    }
+
+    .chat-input button {
+      background: #522E91;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      cursor: pointer;
+    }
+
+    .chat-input input:focus,
+    .chat-input button:focus {
+      outline: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Botón con tooltip -->
+  <div class="chat-toggle-wrapper">
+    <span class="chat-tooltip">¿En qué puedo ayudarte?</span>
+    <button class="chat-toggle-btn" onclick="toggleChat()"></button>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat-container" id="chatBox">
+    <div class="chat-header">
+      <div class="chat-header-title">
+        <img src="Ceciliou.png" alt="Asistente Liza" />
+        <strong>Cecilio</strong>
+      </div>
+      <button class="chat-close-btn" onclick="toggleChat()">✖</button>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input">
+      <input type="text" id="userInput" placeholder="Escribe tu mensaje..." />
+      <button onclick="sendMessage()">Enviar</button>
+    </div>
+  </div>
+
+  <script>
+    let hasGreeted = false;
+
+    function toggleChat() {
+      const chat = document.getElementById("chatBox");
+      const isOpen = chat.classList.contains("open");
+      if (isOpen) {
+        chat.classList.remove("open");
+      } else {
+        chat.classList.add("open");
+        if (!hasGreeted) {
+          setTimeout(() => {
+            sendWelcomeMessage();
+            hasGreeted = true;
+          }, 1000);
+        }
+        setTimeout(() => {
+          document.getElementById("userInput").focus();
+        }, 300);
+      }
+    }
+
+    function getSessionId() {
+      const key = "chat_session_id";
+      let id = sessionStorage.getItem(key);
+      if (!id) {
+        id = crypto.randomUUID();
+        sessionStorage.setItem(key, id);
+      }
+      return id;
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById("userInput");
+      const message = input.value.trim();
+      if (!message) return;
+
+      addMessage("user", message);
+      input.value = "";
+
+      try {
+        const res = await fetch("https://nicowar.app.n8n.cloud/webhook/23b06e86-8933-4dd3-a6f4-5b1a96af6f67/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chatInput: message,
+            sessionId: getSessionId()
+          })
+        });
+
+        const data = await res.json();
+        const reply = data.response || "Lo siento, no entendí.";
+        displayBotReplyInChunks(reply);
+      } catch (e) {
+        addMessage("bot", "Ocurrió un error al conectar con el asistente.");
+      }
+    }
+
+    function addMessage(role, text) {
+      const msg = document.createElement("div");
+      msg.className = `message ${role}`;
+      msg.innerHTML = renderMarkdown(text);
+      document.getElementById("chatMessages").appendChild(msg);
+      msg.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function renderMarkdown(text) {
+      return text
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*(.*?)\*/g, "<em>$1</em>")
+        .replace(/\n/g, "<br>");
+    }
+
+    function displayBotReplyInChunks(fullReply) {
+      const chunks = fullReply.split(/(?:\n|\|\|)+/);
+      chunks.forEach((chunk, index) => {
+        if (chunk.trim() !== "") {
+          setTimeout(() => {
+            addMessage("bot", chunk.trim());
+          }, index * 1000);
+        }
+      });
+    }
+
+    // Escuchar ENTER en el input
+    document.addEventListener("DOMContentLoaded", () => {
+      const input = document.getElementById("userInput");
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault(); // para evitar salto de línea
+          sendMessage();
+        }
+      });
+    });
+
+  </script>
+
+</body>
+</html>
